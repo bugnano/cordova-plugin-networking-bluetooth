@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin id="cordova-plugin-networking-bluetooth" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>NetworkingBluetooth</name>
+    <js-module name="NetworkingBluetooth" src="www/NetworkingBluetooth.js">
+        <clobbers target="cordova.plugins.NetworkingBluetooth" />
+    </js-module>
+</plugin>
