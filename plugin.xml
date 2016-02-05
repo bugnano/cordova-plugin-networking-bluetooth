@@ -2,12 +2,12 @@
 <plugin id="cordova-plugin-networking-bluetooth" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
 	<name>NetworkingBluetooth</name>
 	<js-module name="NetworkingBluetooth" src="www/NetworkingBluetooth.js">
-		<clobbers target="cordova.plugins.NetworkingBluetooth" />
+		<clobbers target="networking.bluetooth" />
 	</js-module>
 	<platform name="android">
 		<config-file parent="/*" target="res/xml/config.xml">
 			<feature name="NetworkingBluetooth">
-				<param name="android-package" value="cordova-plugin-networking-bluetooth.NetworkingBluetooth" />
+				<param name="android-package" value="cordova.plugin.networking.bluetooth.NetworkingBluetooth" />
 			</feature>
 		</config-file>
 		<config-file parent="/*" target="AndroidManifest.xml" />
