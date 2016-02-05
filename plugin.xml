@@ -10,7 +10,10 @@
 				<param name="android-package" value="cordova.plugin.networking.bluetooth.NetworkingBluetooth" />
 			</feature>
 		</config-file>
-		<config-file parent="/*" target="AndroidManifest.xml" />
+		<config-file parent="/*" target="AndroidManifest.xml">
+			<uses-permission android:name="android.permission.BLUETOOTH" />
+			<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+		</config-file>
 		<source-file src="src/android/NetworkingBluetooth.java" target-dir="src/cordova-plugin-networking-bluetooth/NetworkingBluetooth" />
 	</platform>
 	<platform name="windows">

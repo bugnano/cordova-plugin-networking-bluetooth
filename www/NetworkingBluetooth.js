@@ -15,6 +15,14 @@
 var exec = require('cordova/exec');
 
 exports.coolMethod = function(arg0, success, error) {
-	exec(success, error, "NetworkingBluetooth", "coolMethod", [arg0]);
+	exec(success, error, 'NetworkingBluetooth', 'coolMethod', [arg0]);
+};
+
+exports.isEnabled = function(success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'isEnabled', []);
+};
+
+exports.enable = function(success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'enable', []);
 };
 
