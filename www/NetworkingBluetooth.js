@@ -12,21 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var exec = require('cordova/exec');
+var
+	exec = require('cordova/exec'),
+	channel = require('cordova/channel'),
+	Event = require('cordova-plugin-networking-bluetooth.event')
+;
 
-exports.coolMethod = function(arg0, success, error) {
+exports.coolMethod = function (arg0, success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'coolMethod', [arg0]);
 };
 
-exports.getAdapterState = function(success, error) {
+exports.getAdapterState = function (success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'getAdapterState', []);
 };
 
-exports.enable = function(success, error) {
+exports.enable = function (success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'enable', []);
 };
 
-exports.disable = function(success, error) {
+exports.disable = function (success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'disable', []);
 };
+
+// Events
+exports.onAdapterStateChanged = Object.create(Event);
+exports.onAdapterStateChanged.init();
+
+channel.onCordovaReady.subscribe(function() {
+	exec(function (adapterState) {
+		exports.onAdapterStateChanged.fire(adapterState);
+	}, null, 'NetworkingBluetooth', 'registerAdapterStateChanged', []);
+});
 
