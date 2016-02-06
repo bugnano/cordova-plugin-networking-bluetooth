@@ -18,11 +18,15 @@ exports.coolMethod = function(arg0, success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'coolMethod', [arg0]);
 };
 
-exports.isEnabled = function(success, error) {
-	exec(success, error, 'NetworkingBluetooth', 'isEnabled', []);
+exports.getAdapterState = function(success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'getAdapterState', []);
 };
 
 exports.enable = function(success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'enable', []);
+};
+
+exports.disable = function(success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'disable', []);
 };
 

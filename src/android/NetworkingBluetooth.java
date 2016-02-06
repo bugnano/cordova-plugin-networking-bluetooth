@@ -25,6 +25,7 @@ import org.json.JSONObject;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.util.Log;
 import android.util.SparseArray;
@@ -34,14 +35,13 @@ public class NetworkingBluetooth extends CordovaPlugin {
 	public static final int REQUEST_ENABLE_BT = 1773;
 
 	public BluetoothAdapter mBluetoothAdapter = null;
-	public SparseArray<CallbackContext> mContextForRequest;
+	public SparseArray<CallbackContext> mContextForRequest = new SparseArray<CallbackContext>();
 
 	@Override
 	public void initialize(CordovaInterface cordova, CordovaWebView webView) {
 		super.initialize(cordova, webView);
 
 		this.mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-		this.mContextForRequest = new SparseArray<CallbackContext>();
 	}
 
 	@Override
@@ -55,21 +55,31 @@ public class NetworkingBluetooth extends CordovaPlugin {
 			String message = args.getString(0);
 			this.coolMethod(message, callbackContext);
 			return true;
-		} else if (action.equals("isEnabled")) {
-			if (this.mBluetoothAdapter.isEnabled()) {
-				callbackContext.success(1);
-			} else {
-				callbackContext.success(0);
-			}
+		} else if (action.equals("getAdapterState")) {
+			JSONObject adapterState = new JSONObject();
+			adapterState.put("address", this.mBluetoothAdapter.getAddress());
+			adapterState.put("name", this.mBluetoothAdapter.getName());
+			adapterState.put("discovering", this.mBluetoothAdapter.isDiscovering());
+			adapterState.put("enabled", this.mBluetoothAdapter.isEnabled());
+			adapterState.put("discoverable", this.mBluetoothAdapter.getScanMode() == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE);
+			callbackContext.success(adapterState);
 			return true;
 		} else if (action.equals("enable")) {
 			if (!this.mBluetoothAdapter.isEnabled()) {
-				// TO DO -- this.mContextForRequest may already contain a context,
-				// in which case it should return an error (operation cancelled)
-				// Still, the SparseArray as it is does not work (yet)
-				this.mContextForRequest.put(REQUEST_ENABLE_BT, callbackContext);
 				Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-				cordova.startActivityForResult(this, enableBtIntent, REQUEST_ENABLE_BT);
+				this.prepareActivity(action, args, callbackContext, enableBtIntent, REQUEST_ENABLE_BT);
+			} else {
+				callbackContext.success();
+			}
+			return true;
+		} else if (action.equals("disable")) {
+			if (this.mBluetoothAdapter.isEnabled()) {
+				if (!this.mBluetoothAdapter.disable()) {
+					callbackContext.error(0);
+				} else {
+					// TO DO -- The success callback should be called once the adapter has been succesfully disabled
+					callbackContext.success();
+				}
 			} else {
 				callbackContext.success();
 			}
@@ -80,13 +90,31 @@ public class NetworkingBluetooth extends CordovaPlugin {
 		}
 	}
 
+	public void prepareActivity(String action, JSONArray args, CallbackContext callbackContext, Intent intent, int requestCode) {
+		// First of all I have to check whether there already is another activity pending with the same requestCode
+		CallbackContext oldContext = this.mContextForRequest.get(requestCode);
+		this.mContextForRequest.remove(requestCode);
+
+		// TO DO -- I have to cancel the activity here
+
+		// If there already is another activity with this request code, call the error callback in order
+		// to notify that the prev9ous activity has been cancelled
+		if (oldContext != null) {
+			oldContext.error(1);
+		}
+
+		// Store the callbackContext, in order to send the result once the activity has been completed
+		this.mContextForRequest.put(REQUEST_ENABLE_BT, callbackContext);
+
+		// Store the callbackContext, in order to send the result once the activity has been completed
+		cordova.startActivityForResult(this, intent, requestCode);
+	}
+
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-		JSONArray args = new JSONArray();
-		args.put(requestCode);
-		args.put(resultCode);
+		CallbackContext callbackContext = this.mContextForRequest.get(requestCode);
+		this.mContextForRequest.remove(requestCode);
 
-		CallbackContext callbackContext = this.mContextForRequest.get(resultCode);
 		if (callbackContext != null) {
 			if (resultCode == Activity.RESULT_OK) {
 				callbackContext.success();
@@ -96,7 +124,6 @@ public class NetworkingBluetooth extends CordovaPlugin {
 		} else {
 			Log.e(TAG, "BUG: onActivityResult -- (callbackContext == null)");
 		}
-		this.mContextForRequest.remove(resultCode);
 	}
 
 	private void coolMethod(String message, CallbackContext callbackContext) {
