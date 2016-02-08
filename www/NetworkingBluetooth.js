@@ -38,13 +38,28 @@ exports.getDevices = function (success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'getDevices', []);
 };
 
+exports.startDiscovery = function (success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'startDiscovery', []);
+};
+
+exports.stopDiscovery = function (success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'stopDiscovery', []);
+};
+
 // Events
 exports.onAdapterStateChanged = Object.create(Event);
 exports.onAdapterStateChanged.init();
+
+exports.onDeviceAdded = Object.create(Event);
+exports.onDeviceAdded.init();
 
 channel.onCordovaReady.subscribe(function() {
 	exec(function (adapterState) {
 		exports.onAdapterStateChanged.fire(adapterState);
 	}, null, 'NetworkingBluetooth', 'registerAdapterStateChanged', []);
+
+	exec(function (deviceInfo) {
+		exports.onDeviceAdded.fire(deviceInfo);
+	}, null, 'NetworkingBluetooth', 'registerDeviceAdded', []);
 });
 

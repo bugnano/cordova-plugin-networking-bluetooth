@@ -3,4 +3,5 @@ Nice to have features in the future that are not essential:
   name changes (ACTION_LOCAL_NAME_CHANGED) to the onAdapterStateChanged event.
 - On the deviceInfo objects, it would be nice to perform a service discovery
   (on Android: fetchUuidsWithSdp), in order to have a reilable uuids array
+- On the deviceInfo objects it can be useful to show the DeviceClass
 
