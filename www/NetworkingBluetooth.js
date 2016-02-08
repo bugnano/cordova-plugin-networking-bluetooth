@@ -34,6 +34,10 @@ exports.disable = function (success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'disable', []);
 };
 
+exports.getDevices = function (success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'getDevices', []);
+};
+
 // Events
 exports.onAdapterStateChanged = Object.create(Event);
 exports.onAdapterStateChanged.init();

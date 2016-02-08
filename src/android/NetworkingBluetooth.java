@@ -31,8 +31,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.ParcelUuid;
 import android.util.Log;
 import android.util.SparseArray;
+
+import java.util.Set;
 
 public class NetworkingBluetooth extends CordovaPlugin {
 	public static final String TAG = "NetworkingBluetooth";
@@ -112,6 +115,14 @@ public class NetworkingBluetooth extends CordovaPlugin {
 				callbackContext.success();
 			}
 			return true;
+		} else if (action.equals("getDevices")) {
+			Set<BluetoothDevice> devices = this.mBluetoothAdapter.getBondedDevices();
+			JSONArray deviceInfos = new JSONArray();
+			for (BluetoothDevice device : devices) {
+				deviceInfos.put(this.getDeviceInfo(device));
+			}
+			callbackContext.success(deviceInfos);
+			return true;
 		} else {
 			callbackContext.error("Invalid action");
 			return false;
@@ -135,6 +146,23 @@ public class NetworkingBluetooth extends CordovaPlugin {
             pluginResult.setKeepCallback(keepCallback);
             callbackContext.sendPluginResult(pluginResult);
 		}
+	}
+
+	public JSONObject getDeviceInfo(BluetoothDevice device) throws JSONException {
+		JSONObject deviceInfo = new JSONObject();
+
+		deviceInfo.put("address", device.getAddress());
+		deviceInfo.put("name", device.getName());
+		deviceInfo.put("paired", device.getBondState() == BluetoothDevice.BOND_BONDED);
+
+		JSONArray deviceUUIDs = new JSONArray();
+		ParcelUuid[] uuids = device.getUuids();
+		for (int i = 0; i < uuids.length; i++) {
+			deviceUUIDs.put(uuids[i].toString());
+		}
+		deviceInfo.put("uuids", deviceUUIDs);
+
+		return deviceInfo;
 	}
 
 	public void prepareActivity(String action, JSONArray args, CallbackContext callbackContext, Intent intent, int requestCode) {
