@@ -18,12 +18,12 @@ var
 	Event = require('cordova-plugin-networking-bluetooth.event')
 ;
 
-exports.coolMethod = function (arg0, success, error) {
-	exec(success, error, 'NetworkingBluetooth', 'coolMethod', [arg0]);
-};
-
 exports.getAdapterState = function (success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'getAdapterState', []);
+};
+
+exports.requestEnable = function (success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'requestEnable', []);
 };
 
 exports.enable = function (success, error) {
