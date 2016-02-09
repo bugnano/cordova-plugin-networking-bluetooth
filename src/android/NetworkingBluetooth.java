@@ -40,6 +40,7 @@ import java.util.Set;
 public class NetworkingBluetooth extends CordovaPlugin {
 	public static final String TAG = "NetworkingBluetooth";
 	public static final int REQUEST_ENABLE_BT = 1773;
+	public static final int REQUEST_DISCOVERABLE_BT = 1885;
 
 	public BluetoothAdapter mBluetoothAdapter = null;
 	public SparseArray<CallbackContext> mContextForActivity = new SparseArray<CallbackContext>();
@@ -67,13 +68,11 @@ public class NetworkingBluetooth extends CordovaPlugin {
 		if (action.equals("registerAdapterStateChanged")) {
 			this.mContextForAdapterStateChanged = callbackContext;
 
-			filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-			cordova.getActivity().registerReceiver(this.mReceiver, filter);
-
-			filter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
-			cordova.getActivity().registerReceiver(this.mReceiver, filter);
-
-			filter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+			filter = new IntentFilter();
+			filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+			filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+			filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+			filter.addAction(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED);
 			cordova.getActivity().registerReceiver(this.mReceiver, filter);
 
 			return true;
@@ -165,6 +164,10 @@ public class NetworkingBluetooth extends CordovaPlugin {
 				callbackContext.success();
 			}
 			return true;
+		} else if (action.equals("requestDiscoverable")) {
+			Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+			this.prepareActivity(action, args, callbackContext, discoverableIntent, REQUEST_DISCOVERABLE_BT);
+			return true;
 		} else {
 			callbackContext.error("Invalid action");
 			return false;
@@ -175,12 +178,14 @@ public class NetworkingBluetooth extends CordovaPlugin {
 		PluginResult pluginResult;
 
 		try {
+			int scanMode = this.mBluetoothAdapter.getScanMode();
 			JSONObject adapterState = new JSONObject();
 			adapterState.put("address", this.mBluetoothAdapter.getAddress());
 			adapterState.put("name", this.mBluetoothAdapter.getName());
-			adapterState.put("discovering", this.mBluetoothAdapter.isDiscovering());
 			adapterState.put("enabled", this.mBluetoothAdapter.isEnabled());
-			adapterState.put("discoverable", this.mBluetoothAdapter.getScanMode() == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE);
+			adapterState.put("discovering", this.mBluetoothAdapter.isDiscovering());
+			adapterState.put("connectable", (scanMode == BluetoothAdapter.SCAN_MODE_CONNECTABLE) || (scanMode == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE));
+			adapterState.put("discoverable", scanMode == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE);
 
             pluginResult = new PluginResult(PluginResult.Status.OK, adapterState);
             pluginResult.setKeepCallback(keepCallback);
@@ -235,10 +240,10 @@ public class NetworkingBluetooth extends CordovaPlugin {
 		this.mContextForActivity.remove(requestCode);
 
 		if (callbackContext != null) {
-			if (resultCode == Activity.RESULT_OK) {
-				callbackContext.success();
-			} else {
+			if (resultCode == Activity.RESULT_CANCELED) {
 				callbackContext.error(0);
+			} else {
+				callbackContext.success();
 			}
 		} else {
 			// TO DO -- This may be a bug on the JavaScript side, as we get here only if the
@@ -295,6 +300,13 @@ public class NetworkingBluetooth extends CordovaPlugin {
 					pluginResult = new PluginResult(PluginResult.Status.ERROR, 0);
 					pluginResult.setKeepCallback(true);
 					mContextForDeviceAdded.sendPluginResult(pluginResult);
+				}
+			} else if (action.equals(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED)) {
+				int scanMode = intent.getIntExtra(BluetoothAdapter.EXTRA_SCAN_MODE, -1);
+
+				// Do not report transitions to SCAN_MODE_NONE, as it is already reported with the disabled state
+				if (scanMode != BluetoothAdapter.SCAN_MODE_NONE) {
+					getAdapterState(mContextForAdapterStateChanged, true);
 				}
 			}
 		}

@@ -46,6 +46,10 @@ exports.stopDiscovery = function (success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'stopDiscovery', []);
 };
 
+exports.requestDiscoverable = function (success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'requestDiscoverable', []);
+};
+
 // Events
 exports.onAdapterStateChanged = Object.create(Event);
 exports.onAdapterStateChanged.init();
