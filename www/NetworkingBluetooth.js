@@ -54,12 +54,30 @@ exports.requestDiscoverable = function (success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'requestDiscoverable', []);
 };
 
+exports.connect = function (address, uuid, success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'connect', [address, uuid]);
+};
+
+exports.close = function (socketId, success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'close', [socketId]);
+};
+
+exports.send = function (socketId, data, success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'send', [socketId, data]);
+};
+
 // Events
 exports.onAdapterStateChanged = Object.create(Event);
 exports.onAdapterStateChanged.init();
 
 exports.onDeviceAdded = Object.create(Event);
 exports.onDeviceAdded.init();
+
+exports.onReceive = Object.create(Event);
+exports.onReceive.init();
+
+exports.onReceiveError = Object.create(Event);
+exports.onReceiveError.init();
 
 channel.onCordovaReady.subscribe(function() {
 	exec(function (adapterState) {
@@ -69,5 +87,16 @@ channel.onCordovaReady.subscribe(function() {
 	exec(function (deviceInfo) {
 		exports.onDeviceAdded.fire(deviceInfo);
 	}, null, 'NetworkingBluetooth', 'registerDeviceAdded', []);
+
+	exec(function (socketId, data) {
+		exports.onReceive.fire({
+			socketId: socketId,
+			data: data
+		});
+	}, null, 'NetworkingBluetooth', 'registerReceive', []);
+
+	exec(function (info) {
+		exports.onReceiveError.fire(info);
+	}, null, 'NetworkingBluetooth', 'registerReceiveError', []);
 });
 

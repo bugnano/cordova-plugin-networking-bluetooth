@@ -14,9 +14,10 @@
 
 package cordova.plugin.networking.bluetooth;
 
-import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaArgs;
 import org.apache.cordova.CordovaInterface;
+import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.PluginResult;
 
@@ -27,28 +28,40 @@ import org.json.JSONObject;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.ParcelUuid;
 import android.util.Log;
-import android.util.SparseArray;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class NetworkingBluetooth extends CordovaPlugin {
 	public static final String TAG = "NetworkingBluetooth";
 	public static final int REQUEST_ENABLE_BT = 1773;
 	public static final int REQUEST_DISCOVERABLE_BT = 1885;
+	public static final int READ_BUFFER_SIZE = 4096;
 
 	public BluetoothAdapter mBluetoothAdapter = null;
-	public SparseArray<CallbackContext> mContextForActivity = new SparseArray<CallbackContext>();
+	public ConcurrentHashMap<Integer, CallbackContext> mContextForActivity = new ConcurrentHashMap<Integer, CallbackContext>();
 	public CallbackContext mContextForAdapterStateChanged = null;
 	public CallbackContext mContextForDeviceAdded = null;
 	public CallbackContext mContextForEnable = null;
 	public CallbackContext mContextForDisable = null;
+	public CallbackContext mContextForReceive = null;
+	public CallbackContext mContextForReceiveError = null;
 	public int mPreviousScanMode = BluetoothAdapter.SCAN_MODE_NONE;
+	public AtomicInteger mSocketId = new AtomicInteger(1);
+	public ConcurrentHashMap<Integer, BluetoothSocket> mClientSockets = new ConcurrentHashMap<Integer, BluetoothSocket>();
 
 	@Override
 	public void initialize(CordovaInterface cordova, CordovaWebView webView) {
@@ -62,7 +75,7 @@ public class NetworkingBluetooth extends CordovaPlugin {
 	}
 
 	@Override
-	public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+	public boolean execute(String action, CordovaArgs args, final CallbackContext callbackContext) throws JSONException {
 		IntentFilter filter;
 
 		if (this.mBluetoothAdapter == null) {
@@ -87,6 +100,12 @@ public class NetworkingBluetooth extends CordovaPlugin {
 			filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
 			cordova.getActivity().registerReceiver(this.mReceiver, filter);
 
+			return true;
+		} else if (action.equals("registerReceive")) {
+			this.mContextForReceive = callbackContext;
+			return true;
+		} else if (action.equals("registerReceiveError")) {
+			this.mContextForReceiveError = callbackContext;
 			return true;
 		} else if (action.equals("getAdapterState")) {
 			this.getAdapterState(callbackContext, false);
@@ -163,7 +182,6 @@ public class NetworkingBluetooth extends CordovaPlugin {
 			}
 			return true;
 		} else if (action.equals("stopDiscovery")) {
-			// TO DO -- cancelDiscovery should be called before connecting to a device
 			if (this.mBluetoothAdapter.isDiscovering()) {
 				if (this.mBluetoothAdapter.cancelDiscovery()) {
 					callbackContext.success();
@@ -177,6 +195,75 @@ public class NetworkingBluetooth extends CordovaPlugin {
 		} else if (action.equals("requestDiscoverable")) {
 			Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
 			this.prepareActivity(action, args, callbackContext, discoverableIntent, REQUEST_DISCOVERABLE_BT);
+			return true;
+		} else if (action.equals("connect")) {
+			final String address = args.getString(0);
+			final String uuid = args.getString(1);
+			cordova.getThreadPool().execute(new Runnable() {
+				public void run() {
+					int socketId;
+					BluetoothSocket socket;
+
+					try {
+						BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+						socket = device.createRfcommSocketToServiceRecord(UUID.fromString(uuid));
+
+						// Note: You should always ensure that the device is not performing
+						// device discovery when you call connect().
+						// If discovery is in progress, then the connection attempt will be
+						// significantly slowed and is more likely to fail.
+						mBluetoothAdapter.cancelDiscovery();
+
+						socket.connect();
+
+						socketId = mSocketId.getAndIncrement();
+						mClientSockets.put(socketId, socket);
+						callbackContext.success(socketId);
+					} catch (NullPointerException e) {
+						callbackContext.error(e.getMessage());
+						return;
+					} catch (IllegalArgumentException e) {
+						callbackContext.error(e.getMessage());
+						return;
+					} catch (IOException e) {
+						callbackContext.error(e.getMessage());
+						return;
+					}
+
+					// Now that the connection has been made, begin the read loop
+					readLoop(socketId, socket);
+				}
+			});
+			return true;
+		} else if (action.equals("close")) {
+			int socketId = args.getInt(0);
+			BluetoothSocket socket = this.mClientSockets.remove(socketId);
+			if (socket != null) {
+				try {
+					socket.close();
+					callbackContext.success();
+				} catch (IOException e) {
+					callbackContext.error(e.getMessage());
+				}
+			} else {
+				// Closing an already closed socket is not an error
+				callbackContext.success();
+			}
+			return true;
+		} else if (action.equals("send")) {
+			int socketId = args.getInt(0);
+			byte[] data = args.getArrayBuffer(1);
+			BluetoothSocket socket = this.mClientSockets.get(socketId);
+			if (socket != null) {
+				try {
+					socket.getOutputStream().write(data);
+					callbackContext.success(data.length);
+				} catch (IOException e) {
+					callbackContext.error(e.getMessage());
+				}
+			} else {
+				callbackContext.error("Invalid socketId");
+			}
 			return true;
 		} else {
 			callbackContext.error("Invalid action");
@@ -199,7 +286,7 @@ public class NetworkingBluetooth extends CordovaPlugin {
             pluginResult.setKeepCallback(keepCallback);
             callbackContext.sendPluginResult(pluginResult);
 		} catch (JSONException e) {
-            pluginResult = new PluginResult(PluginResult.Status.ERROR, 0);
+            pluginResult = new PluginResult(PluginResult.Status.ERROR, e.getMessage());
             pluginResult.setKeepCallback(keepCallback);
             callbackContext.sendPluginResult(pluginResult);
 		}
@@ -222,17 +309,12 @@ public class NetworkingBluetooth extends CordovaPlugin {
 		return deviceInfo;
 	}
 
-	public void prepareActivity(String action, JSONArray args, CallbackContext callbackContext, Intent intent, int requestCode) {
-		// First of all check whether there already is another activity pending with the same requestCode
-		CallbackContext oldContext = this.mContextForActivity.get(requestCode);
-		this.mContextForActivity.remove(requestCode);
-
-		// TO DO -- The activity should be canceled here
-
+	public void prepareActivity(String action, CordovaArgs args, CallbackContext callbackContext, Intent intent, int requestCode) {
 		// If there already is another activity with this request code, call the error callback in order
-		// to notify that the previous activity has been cancelled
-		if (oldContext != null) {
-			oldContext.error(1);
+		// to notify that the activity has been cancelled
+		if (this.mContextForActivity.containsKey(requestCode)) {
+			callbackContext.error("Attempted to start the same activity twice");
+			return;
 		}
 
 		// Store the callbackContext, in order to send the result once the activity has been completed
@@ -244,8 +326,7 @@ public class NetworkingBluetooth extends CordovaPlugin {
 
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-		CallbackContext callbackContext = this.mContextForActivity.get(requestCode);
-		this.mContextForActivity.remove(requestCode);
+		CallbackContext callbackContext = this.mContextForActivity.remove(requestCode);
 
 		if (callbackContext != null) {
 			if (resultCode == Activity.RESULT_CANCELED) {
@@ -305,7 +386,7 @@ public class NetworkingBluetooth extends CordovaPlugin {
 					pluginResult.setKeepCallback(true);
 					mContextForDeviceAdded.sendPluginResult(pluginResult);
 				} catch (JSONException e) {
-					pluginResult = new PluginResult(PluginResult.Status.ERROR, 0);
+					pluginResult = new PluginResult(PluginResult.Status.ERROR, e.getMessage());
 					pluginResult.setKeepCallback(true);
 					mContextForDeviceAdded.sendPluginResult(pluginResult);
 				}
@@ -324,5 +405,49 @@ public class NetworkingBluetooth extends CordovaPlugin {
 			}
 		}
 	};
+
+	public void readLoop(int socketId, BluetoothSocket socket) {
+		byte[] readBuffer = new byte[READ_BUFFER_SIZE];
+		byte[] data;
+		JSONObject info;
+		ArrayList<PluginResult> multipartMessages;
+		PluginResult pluginResult;
+
+		try {
+			InputStream stream = socket.getInputStream();
+			int bytesRead;
+
+			while (socket.isConnected()) {
+				bytesRead = stream.read(readBuffer);
+				if (bytesRead < 0) {
+					throw new IOException("Disconnected");
+				} else if (bytesRead > 0) {
+					data = Arrays.copyOf(readBuffer, bytesRead);
+					multipartMessages = new ArrayList<PluginResult>();
+					multipartMessages.add(new PluginResult(PluginResult.Status.OK, socketId));
+					multipartMessages.add(new PluginResult(PluginResult.Status.OK, data));
+					pluginResult = new PluginResult(PluginResult.Status.OK, multipartMessages);
+					pluginResult.setKeepCallback(true);
+					this.mContextForReceive.sendPluginResult(pluginResult);
+				}
+			}
+		} catch (IOException e) {
+			try {
+				info = new JSONObject();
+				info.put("socketId", socketId);
+				info.put("errorMessage", e.getMessage());
+				pluginResult = new PluginResult(PluginResult.Status.OK, info);
+				pluginResult.setKeepCallback(true);
+				this.mContextForReceiveError.sendPluginResult(pluginResult);
+			} catch (JSONException ex) {}
+		}
+
+		try {
+			socket.close();
+		} catch (IOException e) {}
+
+		// The socket has been closed, remove its socketId
+		this.mClientSockets.remove(socketId);
+	}
 }
 
