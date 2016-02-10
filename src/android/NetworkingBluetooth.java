@@ -48,12 +48,17 @@ public class NetworkingBluetooth extends CordovaPlugin {
 	public CallbackContext mContextForDeviceAdded = null;
 	public CallbackContext mContextForEnable = null;
 	public CallbackContext mContextForDisable = null;
+	public int mPreviousScanMode = BluetoothAdapter.SCAN_MODE_NONE;
 
 	@Override
 	public void initialize(CordovaInterface cordova, CordovaWebView webView) {
 		super.initialize(cordova, webView);
 
 		this.mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
+		if (this.mBluetoothAdapter != null) {
+			this.mPreviousScanMode = this.mBluetoothAdapter.getScanMode();
+		}
 	}
 
 	@Override
@@ -132,6 +137,11 @@ public class NetworkingBluetooth extends CordovaPlugin {
 				callbackContext.success();
 			}
 			return true;
+		} else if (action.equals("getDevice")) {
+			String address = args.getString(0);
+			BluetoothDevice device = this.mBluetoothAdapter.getRemoteDevice(address);
+			callbackContext.success(this.getDeviceInfo(device));
+			return true;
 		} else if (action.equals("getDevices")) {
 			Set<BluetoothDevice> devices = this.mBluetoothAdapter.getBondedDevices();
 			JSONArray deviceInfos = new JSONArray();
@@ -178,14 +188,12 @@ public class NetworkingBluetooth extends CordovaPlugin {
 		PluginResult pluginResult;
 
 		try {
-			int scanMode = this.mBluetoothAdapter.getScanMode();
 			JSONObject adapterState = new JSONObject();
 			adapterState.put("address", this.mBluetoothAdapter.getAddress());
 			adapterState.put("name", this.mBluetoothAdapter.getName());
 			adapterState.put("enabled", this.mBluetoothAdapter.isEnabled());
 			adapterState.put("discovering", this.mBluetoothAdapter.isDiscovering());
-			adapterState.put("connectable", (scanMode == BluetoothAdapter.SCAN_MODE_CONNECTABLE) || (scanMode == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE));
-			adapterState.put("discoverable", scanMode == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE);
+			adapterState.put("discoverable", this.mBluetoothAdapter.getScanMode() == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE);
 
             pluginResult = new PluginResult(PluginResult.Status.OK, adapterState);
             pluginResult.setKeepCallback(keepCallback);
@@ -302,12 +310,17 @@ public class NetworkingBluetooth extends CordovaPlugin {
 					mContextForDeviceAdded.sendPluginResult(pluginResult);
 				}
 			} else if (action.equals(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED)) {
+				// BUG: The documented EXTRA_PREVIOUS_SCAN_MODE field of the intent is not implemented on Android.
+				// For details see:
+				// http://stackoverflow.com/questions/30553911/extra-previous-scan-mode-always-returns-an-error-for-android-bluetooth
+				// As a workaround, the previous scan mode is handled manually here
 				int scanMode = intent.getIntExtra(BluetoothAdapter.EXTRA_SCAN_MODE, -1);
 
-				// Do not report transitions to SCAN_MODE_NONE, as it is already reported with the disabled state
-				if (scanMode != BluetoothAdapter.SCAN_MODE_NONE) {
+				// Report only the transitions from/to SCAN_MODE_CONNECTABLE_DISCOVERABLE
+				if ((scanMode == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) || (mPreviousScanMode == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE)) {
 					getAdapterState(mContextForAdapterStateChanged, true);
 				}
+				mPreviousScanMode = scanMode;
 			}
 		}
 	};
