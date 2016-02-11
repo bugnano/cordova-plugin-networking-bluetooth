@@ -66,6 +66,10 @@ exports.send = function (socketId, data, success, error) {
 	exec(success, error, 'NetworkingBluetooth', 'send', [socketId, data]);
 };
 
+exports.listenUsingRfcomm = function (uuid, success, error) {
+	exec(success, error, 'NetworkingBluetooth', 'listenUsingRfcomm', [uuid]);
+};
+
 // Events
 exports.onAdapterStateChanged = Object.create(Event);
 exports.onAdapterStateChanged.init();
@@ -78,6 +82,12 @@ exports.onReceive.init();
 
 exports.onReceiveError = Object.create(Event);
 exports.onReceiveError.init();
+
+exports.onAccept = Object.create(Event);
+exports.onAccept.init();
+
+exports.onAcceptError = Object.create(Event);
+exports.onAcceptError.init();
 
 channel.onCordovaReady.subscribe(function() {
 	exec(function (adapterState) {
@@ -98,5 +108,16 @@ channel.onCordovaReady.subscribe(function() {
 	exec(function (info) {
 		exports.onReceiveError.fire(info);
 	}, null, 'NetworkingBluetooth', 'registerReceiveError', []);
+
+	exec(function (serverSocketId, clientSocketId) {
+		exports.onAccept.fire({
+			socketId: serverSocketId,
+			clientSocketId: clientSocketId
+		});
+	}, null, 'NetworkingBluetooth', 'registerAccept', []);
+
+	exec(function (info) {
+		exports.onAcceptError.fire(info);
+	}, null, 'NetworkingBluetooth', 'registerAcceptError', []);
 });
 
