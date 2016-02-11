@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -52,6 +53,19 @@ public class NetworkingBluetooth extends CordovaPlugin {
 	public static final int REQUEST_ENABLE_BT = 1773;
 	public static final int REQUEST_DISCOVERABLE_BT = 1885;
 	public static final int READ_BUFFER_SIZE = 4096;
+	public static final int SEND_QUEUE_SIZE = 256;
+
+	public class SocketSendData {
+		public CallbackContext mCallbackContext;
+		public BluetoothSocket mSocket;
+		public byte[] mData;
+
+		public SocketSendData(CallbackContext callbackContext, BluetoothSocket socket, byte[] data) {
+			this.mCallbackContext = callbackContext;
+			this.mSocket = socket;
+			this.mData = data;
+		}
+	}
 
 	public BluetoothAdapter mBluetoothAdapter = null;
 	public ConcurrentHashMap<Integer, CallbackContext> mContextForActivity = new ConcurrentHashMap<Integer, CallbackContext>();
@@ -67,6 +81,7 @@ public class NetworkingBluetooth extends CordovaPlugin {
 	public AtomicInteger mSocketId = new AtomicInteger(1);
 	public ConcurrentHashMap<Integer, BluetoothSocket> mClientSockets = new ConcurrentHashMap<Integer, BluetoothSocket>();
 	public ConcurrentHashMap<Integer, BluetoothServerSocket> mServerSockets = new ConcurrentHashMap<Integer, BluetoothServerSocket>();
+	public ArrayBlockingQueue<SocketSendData> mSendQueue = new ArrayBlockingQueue<SocketSendData>(SEND_QUEUE_SIZE);
 
 	@Override
 	public void initialize(CordovaInterface cordova, CordovaWebView webView) {
@@ -77,6 +92,12 @@ public class NetworkingBluetooth extends CordovaPlugin {
 		if (this.mBluetoothAdapter != null) {
 			this.mPreviousScanMode = this.mBluetoothAdapter.getScanMode();
 		}
+
+		cordova.getThreadPool().execute(new Runnable() {
+			public void run() {
+				writeLoop();
+			}
+		});
 	}
 
 	@Override
@@ -274,15 +295,14 @@ public class NetworkingBluetooth extends CordovaPlugin {
 			}
 			return true;
 		} else if (action.equals("send")) {
-			// TO DO -- It might be a good idea to have a single separate thread that sends the data
 			int socketId = args.getInt(0);
 			byte[] data = args.getArrayBuffer(1);
 			BluetoothSocket socket = this.mClientSockets.get(socketId);
 			if (socket != null) {
 				try {
-					socket.getOutputStream().write(data);
-					callbackContext.success(data.length);
-				} catch (IOException e) {
+					// The send operation occurs in a separate thread
+					this.mSendQueue.put(new SocketSendData(callbackContext, socket, data));
+				} catch (InterruptedException e) {
 					callbackContext.error(e.getMessage());
 				}
 			} else {
@@ -551,6 +571,23 @@ public class NetworkingBluetooth extends CordovaPlugin {
 				readLoop(socketId, socket);
 			}
 		});
+	}
+
+	public void writeLoop() {
+		SocketSendData sendData;
+
+		try {
+			while (true) {
+				sendData = this.mSendQueue.take();
+
+				try {
+					sendData.mSocket.getOutputStream().write(sendData.mData);
+					sendData.mCallbackContext.success(sendData.mData.length);
+				} catch (IOException e) {
+					sendData.mCallbackContext.error(e.getMessage());
+				}
+			}
+		} catch (InterruptedException e) {}
 	}
 }
 
