@@ -43,8 +43,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class NetworkingBluetooth extends CordovaPlugin {
@@ -53,7 +53,6 @@ public class NetworkingBluetooth extends CordovaPlugin {
 	public static final int REQUEST_ENABLE_BT = 1773;
 	public static final int REQUEST_DISCOVERABLE_BT = 1885;
 	public static final int READ_BUFFER_SIZE = 4096;
-	public static final int SEND_QUEUE_SIZE = 256;
 
 	public class SocketSendData {
 		public CallbackContext mCallbackContext;
@@ -81,7 +80,7 @@ public class NetworkingBluetooth extends CordovaPlugin {
 	public AtomicInteger mSocketId = new AtomicInteger(1);
 	public ConcurrentHashMap<Integer, BluetoothSocket> mClientSockets = new ConcurrentHashMap<Integer, BluetoothSocket>();
 	public ConcurrentHashMap<Integer, BluetoothServerSocket> mServerSockets = new ConcurrentHashMap<Integer, BluetoothServerSocket>();
-	public ArrayBlockingQueue<SocketSendData> mSendQueue = new ArrayBlockingQueue<SocketSendData>(SEND_QUEUE_SIZE);
+	public LinkedBlockingQueue<SocketSendData> mSendQueue = new LinkedBlockingQueue<SocketSendData>();
 
 	@Override
 	public void initialize(CordovaInterface cordova, CordovaWebView webView) {

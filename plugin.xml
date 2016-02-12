@@ -1,10 +1,32 @@
 <?xml version='1.0' encoding='utf-8'?>
-<plugin id="cordova-plugin-networking-bluetooth" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
-	<name>NetworkingBluetooth</name>
+<!--
+  Copyright 2016 Franco Bugnano
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<plugin id="cordova-plugin-networking-bluetooth" version="1.0.0" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+	<name>Bluetooth Networking</name>
+	<description>Bluetooth Networking Plugin for Cordova</description>
+	<author>Franco Bugnano</author>
+	<license>Apache 2.0</license>
+	<keywords>cordova,bluetooth,network,networking,rfcomm,socket,client,server,peer,p2p</keywords>
+
 	<js-module name="event" src="www/event.js" />
 	<js-module name="NetworkingBluetooth" src="www/NetworkingBluetooth.js">
 		<clobbers target="networking.bluetooth" />
 	</js-module>
+
 	<platform name="android">
 		<config-file parent="/*" target="res/xml/config.xml">
 			<feature name="NetworkingBluetooth">
@@ -15,12 +37,7 @@
 			<uses-permission android:name="android.permission.BLUETOOTH" />
 			<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
 		</config-file>
-		<source-file src="src/android/NetworkingBluetooth.java" target-dir="src/cordova-plugin-networking-bluetooth/NetworkingBluetooth" />
-	</platform>
-	<platform name="windows">
-		<js-module name="NetworkingBluetooth" src="src/windows/NetworkingBluetooth.js">
-			<runs target="" />
-		</js-module>
+		<source-file src="src/android/NetworkingBluetooth.java" target-dir="src/cordova/plugin/networking/bluetooth" />
 	</platform>
 </plugin>
 
