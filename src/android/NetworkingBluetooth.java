@@ -372,8 +372,10 @@ public class NetworkingBluetooth extends CordovaPlugin {
 
 		JSONArray deviceUUIDs = new JSONArray();
 		ParcelUuid[] uuids = device.getUuids();
-		for (int i = 0; i < uuids.length; i++) {
-			deviceUUIDs.put(uuids[i].toString());
+		if (uuids != null) {
+			for (int i = 0; i < uuids.length; i++) {
+				deviceUUIDs.put(uuids[i].toString());
+			}
 		}
 		deviceInfo.put("uuids", deviceUUIDs);
 

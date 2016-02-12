@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-networking-bluetooth",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Bluetooth Networking Plugin for Cordova",
   "cordova": {
     "id": "cordova-plugin-networking-bluetooth",
