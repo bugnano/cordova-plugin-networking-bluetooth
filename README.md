@@ -21,6 +21,9 @@ This plugin provides Bluetooth RFCOMM connectivity for peer to peer networking
 between Android devices, with an API inspired by
 [Mobile Chrome Apps Bluetooth Socket](https://developer.chrome.com/apps/bluetoothSocket).
 
+For an explaination of the rationale behind this plugin,
+see [this blog post](http://cownado.com/posts/2016/02/bluetooth-networking-plugin-for-cordova.html).
+
 ## Installation
 
     cordova plugin add cordova-plugin-networking-bluetooth
