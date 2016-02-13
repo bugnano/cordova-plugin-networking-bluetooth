@@ -39,5 +39,11 @@
 		</config-file>
 		<source-file src="src/android/NetworkingBluetooth.java" target-dir="src/cordova/plugin/networking/bluetooth" />
 	</platform>
+
+	<platform name="windows">
+		<js-module name="NetworkingBluetoothProxy" src="src/windows/NetworkingBluetoothProxy.js">
+			<runs target="" />
+		</js-module>
+	</platform>
 </plugin>
 
