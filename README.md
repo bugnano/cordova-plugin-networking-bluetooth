@@ -201,7 +201,7 @@ networking.bluetooth.send(socketId, arrayBuffer, function(bytes_sent) {
 In contrast to the method to send data, data is received in an event (`onReceive`).
 
 ```javascript
-networking.bluetooth.onRecieve.addListener(function (receiveInfo) {
+networking.bluetooth.onReceive.addListener(function (receiveInfo) {
     if (receiveInfo.socketId !== socketId) {
         return;
     }
