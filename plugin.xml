@@ -22,7 +22,7 @@
 	<license>Apache 2.0</license>
 	<keywords>cordova,bluetooth,network,networking,rfcomm,socket,client,server,peer,p2p</keywords>
 
-	<js-module name="event" src="www/event.js" />
+	<js-module name="CDVNetEvent" src="www/CDVNetEvent.js" />
 	<js-module name="NetworkingBluetooth" src="www/NetworkingBluetooth.js">
 		<clobbers target="networking.bluetooth" />
 	</js-module>

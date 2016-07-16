@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var Event = {
+var CDVNetEvent = {
 	init: function () {
 		this.listeners = [];
 	},
@@ -53,5 +53,5 @@ var Event = {
 	}
 };
 
-module.exports = Event;
+module.exports = CDVNetEvent;
 

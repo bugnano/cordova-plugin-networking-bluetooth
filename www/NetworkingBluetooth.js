@@ -15,7 +15,7 @@
 var
 	exec = require('cordova/exec'),
 	channel = require('cordova/channel'),
-	Event = require('cordova-plugin-networking-bluetooth.event')
+	CDVNetEvent = require('cordova-plugin-networking-bluetooth.CDVNetEvent')
 ;
 
 exports.getAdapterState = function (success, error) {
@@ -71,22 +71,22 @@ exports.listenUsingRfcomm = function (uuid, success, error) {
 };
 
 // Events
-exports.onAdapterStateChanged = Object.create(Event);
+exports.onAdapterStateChanged = Object.create(CDVNetEvent);
 exports.onAdapterStateChanged.init();
 
-exports.onDeviceAdded = Object.create(Event);
+exports.onDeviceAdded = Object.create(CDVNetEvent);
 exports.onDeviceAdded.init();
 
-exports.onReceive = Object.create(Event);
+exports.onReceive = Object.create(CDVNetEvent);
 exports.onReceive.init();
 
-exports.onReceiveError = Object.create(Event);
+exports.onReceiveError = Object.create(CDVNetEvent);
 exports.onReceiveError.init();
 
-exports.onAccept = Object.create(Event);
+exports.onAccept = Object.create(CDVNetEvent);
 exports.onAccept.init();
 
-exports.onAcceptError = Object.create(Event);
+exports.onAcceptError = Object.create(CDVNetEvent);
 exports.onAcceptError.init();
 
 channel.onCordovaReady.subscribe(function() {
