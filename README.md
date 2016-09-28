@@ -195,7 +195,7 @@ networking.bluetooth.send(socketId, arrayBuffer, function(bytes_sent) {
     console.log('Sent ' + bytes_sent + ' bytes');
 }, function (errorMessage) {
     console.log('Send failed: ' + errorMessage);
-})
+});
 ```
 
 In contrast to the method to send data, data is received in an event (`onReceive`).

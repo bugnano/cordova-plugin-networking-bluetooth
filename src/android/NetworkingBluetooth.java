@@ -225,6 +225,7 @@ public class NetworkingBluetooth extends CordovaPlugin {
 			return true;
 		} else if (action.equals("requestDiscoverable")) {
 			Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+			discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
 			this.prepareActivity(action, args, callbackContext, discoverableIntent, REQUEST_DISCOVERABLE_BT);
 			return true;
 		} else if (action.equals("connect")) {
