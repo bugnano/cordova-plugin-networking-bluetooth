@@ -15,7 +15,7 @@
   limitations under the License.
 -->
 
-<plugin id="cordova-plugin-networking-bluetooth" version="1.0.2" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+<plugin id="cordova-plugin-networking-bluetooth" version="1.0.3" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
 	<name>Bluetooth Networking</name>
 	<description>Bluetooth Networking Plugin for Cordova</description>
 	<author>Franco Bugnano</author>
