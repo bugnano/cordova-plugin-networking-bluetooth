@@ -36,6 +36,7 @@
 		<config-file parent="/*" target="AndroidManifest.xml">
 			<uses-permission android:name="android.permission.BLUETOOTH" />
 			<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+			<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 		</config-file>
 		<source-file src="src/android/NetworkingBluetooth.java" target-dir="src/cordova/plugin/networking/bluetooth" />
 	</platform>

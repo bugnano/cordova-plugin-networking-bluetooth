@@ -34,6 +34,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.Manifest;
 import android.os.ParcelUuid;
 import android.util.Log;
 
@@ -52,6 +54,7 @@ public class NetworkingBluetooth extends CordovaPlugin {
 	public static final String SERVICE_NAME = "CordovaNetworkingBluetooth";
 	public static final int REQUEST_ENABLE_BT = 1773;
 	public static final int REQUEST_DISCOVERABLE_BT = 1885;
+	public static final int START_DISCOVERY_REQ_CODE = 1997;
 	public static final int READ_BUFFER_SIZE = 4096;
 
 	public class SocketSendData {
@@ -68,6 +71,7 @@ public class NetworkingBluetooth extends CordovaPlugin {
 
 	public BluetoothAdapter mBluetoothAdapter = null;
 	public ConcurrentHashMap<Integer, CallbackContext> mContextForActivity = new ConcurrentHashMap<Integer, CallbackContext>();
+	public ConcurrentHashMap<Integer, CallbackContext> mContextForPermission = new ConcurrentHashMap<Integer, CallbackContext>();
 	public CallbackContext mContextForAdapterStateChanged = null;
 	public CallbackContext mContextForDeviceAdded = null;
 	public CallbackContext mContextForReceive = null;
@@ -76,6 +80,7 @@ public class NetworkingBluetooth extends CordovaPlugin {
 	public CallbackContext mContextForAcceptError = null;
 	public CallbackContext mContextForEnable = null;
 	public CallbackContext mContextForDisable = null;
+	public boolean mDeviceAddedRegistered = false;
 	public int mPreviousScanMode = BluetoothAdapter.SCAN_MODE_NONE;
 	public AtomicInteger mSocketId = new AtomicInteger(1);
 	public ConcurrentHashMap<Integer, BluetoothSocket> mClientSockets = new ConcurrentHashMap<Integer, BluetoothSocket>();
@@ -121,10 +126,6 @@ public class NetworkingBluetooth extends CordovaPlugin {
 			return true;
 		} else if (action.equals("registerDeviceAdded")) {
 			this.mContextForDeviceAdded = callbackContext;
-
-			filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-			cordova.getActivity().registerReceiver(this.mReceiver, filter);
-
 			return true;
 		} else if (action.equals("registerReceive")) {
 			this.mContextForReceive = callbackContext;
@@ -206,10 +207,10 @@ public class NetworkingBluetooth extends CordovaPlugin {
 				this.mBluetoothAdapter.cancelDiscovery();
 			}
 
-			if (this.mBluetoothAdapter.startDiscovery()) {
-				callbackContext.success();
+			if (cordova.hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+				this.startDiscovery(callbackContext);
 			} else {
-				callbackContext.error(0);
+				this.getPermission(callbackContext, START_DISCOVERY_REQ_CODE, Manifest.permission.ACCESS_COARSE_LOCATION);
 			}
 			return true;
 		} else if (action.equals("stopDiscovery")) {
@@ -590,6 +591,47 @@ public class NetworkingBluetooth extends CordovaPlugin {
 				}
 			}
 		} catch (InterruptedException e) {}
+	}
+
+	public void startDiscovery(CallbackContext callbackContext) {
+		if (!this.mDeviceAddedRegistered) {
+			IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+			cordova.getActivity().registerReceiver(this.mReceiver, filter);
+			this.mDeviceAddedRegistered = true;
+		}
+
+		if (this.mBluetoothAdapter.startDiscovery()) {
+			callbackContext.success();
+		} else {
+			callbackContext.error(0);
+		}
+	}
+
+	public void getPermission(CallbackContext callbackContext, int requestCode, String permission) {
+		// If there already is another permission request with this request code, call the error callback in order
+		// to notify that the request has been cancelled
+		if (this.mContextForPermission.containsKey(requestCode)) {
+			callbackContext.error("Attempted to request the same permission twice");
+			return;
+		}
+
+		// Store the callbackContext, in order to send the result once the activity has been completed
+		this.mContextForPermission.put(requestCode, callbackContext);
+
+		cordova.requestPermission(this, requestCode, permission);
+	}
+
+	@Override
+	public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) throws JSONException {
+		CallbackContext callbackContext = this.mContextForPermission.remove(requestCode);
+
+		if (requestCode == START_DISCOVERY_REQ_CODE) {
+			if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+				this.startDiscovery(callbackContext);
+			} else {
+				callbackContext.error(0);
+			}
+		}
 	}
 }
 
