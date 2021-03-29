@@ -206,11 +206,12 @@ public class NetworkingBluetooth extends CordovaPlugin {
 			if (this.mBluetoothAdapter.isDiscovering()) {
 				this.mBluetoothAdapter.cancelDiscovery();
 			}
-
-			if (cordova.hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-				this.startDiscovery(callbackContext);
-			} else {
+			if (!cordova.hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
 				this.getPermission(callbackContext, START_DISCOVERY_REQ_CODE, Manifest.permission.ACCESS_COARSE_LOCATION);
+			} else if (!cordova.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+				this.getPermission(callbackContext, START_DISCOVERY_REQ_CODE, Manifest.permission.ACCESS_FINE_LOCATION);
+			} else {
+				this.startDiscovery(callbackContext);
 			}
 			return true;
 		} else if (action.equals("stopDiscovery")) {
